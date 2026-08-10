@@ -43,7 +43,7 @@ URL_PROJECTS_BOT = "https://t.me/RRnftStoreBot"
 
 URL_CONTACT_NAZA = "https://t.me/wmixz"
 URL_CONTACT_MANAGER = "https://t.me/RrManag"
-URL_CONTACT_GARANT = "https://t.me/RrGarant"
+URL_CONTACT_GARANT = "https://t.me/RrGuard"
 
 URL_REVIEWS = "https://t.me/RrNazaReviews"
 
