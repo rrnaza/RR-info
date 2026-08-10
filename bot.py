@@ -25,7 +25,7 @@ from telegram.ext import (
 # КОНФИГУРАЦИЯ
 # =========================================================
 
-TOKEN = os.environ.get("BOT_TOKEN", "8873232031:AAFu5RAgsCa0YvrNxUuQlZniatQ2_d71NeI")
+TOKEN = os.environ.get("BOT_TOKEN", "8873232031:AAHahGNi1HsZUeTXPif1d1dtNrr0Fzw_3RQ")
 PORT = int(os.environ.get("PORT", 8080))
 
 logging.basicConfig(
