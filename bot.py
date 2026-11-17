@@ -163,6 +163,39 @@ TEXT_ADS = (
 )
 
 # =========================================================
+# RICH-СООБЩЕНИЯ (Bot API 10.x): баннер, текст и синие кнопки внутри одного большого сообщения
+# =========================================================
+
+IMG_URL = "https://raw.githubusercontent.com/rrnaza/RR-info/main/img/{}.jpg"
+
+ALT = {E_HUB: "📢", E_TALK: "💬", E_NAZA: "👑", E_HELPER: "➕", E_DEAL: "🛡", E_REVIEWS: "💬", E_OFFER: "✉️"}
+
+def rbtn(text: str, url: str, icon: str) -> str:
+    return f'<tg-button type="url" url="{url}" style="primary">{pe(icon, ALT[icon])} {text}</tg-button>'
+
+def rrow(*buttons: str) -> str:
+    return "<tg-button-row>" + "".join(buttons) + "</tg-button-row>"
+
+def rich_text(html_text: str) -> str:
+    """текст в обычном HTML Telegram (с \n) → абзац rich-сообщения (с <br/>)"""
+    return html_text.replace("\n", "<br/>")
+
+RICH = {
+    "info": f"<p>{rich_text(WELCOME_TEXT)}</p>",
+    "about": f"<p>{rich_text(TEXT_ABOUT)}</p>",
+    "projects": f"<p>{rich_text(TEXT_PROJECTS)}</p>"
+                + rrow(rbtn(BTN_PROJECTS_CHANNEL, URL_PROJECTS_CHANNEL, E_HUB), rbtn(BTN_PROJECTS_TALK, URL_PROJECTS_TALK, E_TALK)),
+    "contacts": f"<p>{rich_text(TEXT_CONTACTS.split('<blockquote>')[0].rstrip())}</p>"
+                "<blockquote>Стоимость услуги — <b>5% от суммы сделки.</b><br/>"
+                "Если сумма сделки до <b>500 грн</b> — фиксировано <b>25 грн.</b></blockquote>"
+                "<p>По всем остальным вопросам обращайтесь к <b>нашей команде</b> — постараемся помочь!</p>"
+                + rrow(rbtn(BTN_CONTACT_NAZA, URL_CONTACT_NAZA, E_NAZA))
+                + rrow(rbtn(BTN_CONTACT_MANAGER, URL_CONTACT_MANAGER, E_HELPER), rbtn(BTN_CONTACT_GARANT, URL_CONTACT_GARANT, E_DEAL)),
+    "reviews": f"<p>{rich_text(TEXT_REVIEWS)}</p>" + rrow(rbtn(BTN_REVIEWS_LINK, URL_REVIEWS, E_REVIEWS)),
+    "ads": f"<p>{rich_text(TEXT_ADS)}</p>" + rrow(rbtn(BTN_ADS_LINK, URL_ADS_CONTACT, E_OFFER)),
+}
+
+# =========================================================
 # КЛАВИАТУРЫ
 # =========================================================
 
@@ -219,8 +252,24 @@ def ads_inline_keyboard() -> InlineKeyboardMarkup:
 # ОТПРАВКА: баннер + текст подписью одним сообщением
 # =========================================================
 
-async def send_section(chat, banner: str, text: str, reply_markup, where: str) -> None:
-    """баннер img/<banner>.jpg с текстом-подписью; если картинки нет — просто текст"""
+async def send_section(bot, chat, banner: str, text: str, reply_markup, where: str) -> None:
+    """rich-сообщение (баннер + текст + кнопки внутри); если Telegram его не примет —
+    баннер img/<banner>.jpg с текстом-подписью и обычными кнопками"""
+    rich = RICH.get(banner)
+    if rich:
+        rich_markup = main_reply_keyboard() if banner == "info" else InlineKeyboardMarkup([[back_button()]])
+        try:
+            await bot.do_api_request(
+                "sendRichMessage",
+                api_kwargs={
+                    "chat_id": chat.id,
+                    "rich_message": {"html": f'<img src="{IMG_URL.format(banner)}"/>' + rich},
+                    "reply_markup": rich_markup.to_dict(),
+                },
+            )
+            return
+        except Exception as exc:  # старый python-telegram-bot или Telegram не принял — шлём по-старому
+            logger.warning("Rich-сообщение в разделе '%s' не ушло: %s — отправляю фото с подписью", where, exc)
     path = IMG / f"{banner}.jpg"
     try:
         if path.exists():
@@ -263,22 +312,22 @@ def strip_icons(markup):
 # =========================================================
 
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await send_section(update.effective_chat, "info", WELCOME_TEXT, main_reply_keyboard(), "Приветствие")
+    await send_section(context.bot, update.effective_chat, "info", WELCOME_TEXT, main_reply_keyboard(), "Приветствие")
 
 async def about_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await send_section(update.effective_chat, "about", TEXT_ABOUT, about_inline_keyboard(), "Обо мне")
+    await send_section(context.bot, update.effective_chat, "about", TEXT_ABOUT, about_inline_keyboard(), "Обо мне")
 
 async def projects_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await send_section(update.effective_chat, "projects", TEXT_PROJECTS, projects_inline_keyboard(), "Проекты")
+    await send_section(context.bot, update.effective_chat, "projects", TEXT_PROJECTS, projects_inline_keyboard(), "Проекты")
 
 async def contacts_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await send_section(update.effective_chat, "contacts", TEXT_CONTACTS, contacts_inline_keyboard(), "Контакты")
+    await send_section(context.bot, update.effective_chat, "contacts", TEXT_CONTACTS, contacts_inline_keyboard(), "Контакты")
 
 async def reviews_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await send_section(update.effective_chat, "reviews", TEXT_REVIEWS, reviews_inline_keyboard(), "Отзывы")
+    await send_section(context.bot, update.effective_chat, "reviews", TEXT_REVIEWS, reviews_inline_keyboard(), "Отзывы")
 
 async def ads_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await send_section(update.effective_chat, "ads", TEXT_ADS, ads_inline_keyboard(), "Реклама")
+    await send_section(context.bot, update.effective_chat, "ads", TEXT_ADS, ads_inline_keyboard(), "Реклама")
 
 async def back_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """«Назад»: убираем кнопки у раздела и присылаем главное меню (приветствие с баннером)"""
@@ -291,7 +340,7 @@ async def back_callback_handler(update: Update, context: ContextTypes.DEFAULT_TY
         await query.edit_message_reply_markup(reply_markup=None)
     except TelegramError as exc:
         logger.warning("Не удалось убрать кнопки: %s", exc)
-    await send_section(update.effective_chat, "info", WELCOME_TEXT, main_reply_keyboard(), "Главное меню")
+    await send_section(context.bot, update.effective_chat, "info", WELCOME_TEXT, main_reply_keyboard(), "Главное меню")
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.error("Исключение при обработке апдейта: %s", context.error)
