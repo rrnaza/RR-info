@@ -72,6 +72,8 @@ E_NAZA = "5229027828527309057"      # 👑
 E_HELPER = "6021659039367173797"    # ➕
 E_DEAL = "6019328362479097179"      # 🛡
 E_REVIEWS = "6019320644422867543"   # 💬 (отзывы)
+E_INFO = "5879785854284599288"      # ℹ️ (реклама)
+E_OFFER = "5967280668885913944"     # ✉️ (Предложить)
 
 
 def pe(emoji_id: str, fallback: str) -> str:
@@ -103,7 +105,7 @@ BTN_CONTACT_MANAGER = "BullXHelper"
 BTN_CONTACT_GARANT = "BullXDeal"
 
 BTN_REVIEWS_LINK = "Смотреть отзывы"
-BTN_ADS_LINK = "📩 Предложить"
+BTN_ADS_LINK = "Предложить"
 
 BTN_BACK = "Назад"
 CALLBACK_BACK = "back_to_main"
@@ -148,14 +150,14 @@ TEXT_REVIEWS = (
 )
 
 TEXT_ADS = (
-    "По вопросам <b>рекламы, взаимопиара и коммерческого сотрудничества</b> "
+    f"{pe(E_INFO, 'ℹ️')}По вопросам <b>рекламы, взаимопиара и коммерческого сотрудничества</b> "
     "обращайтесь <b>строго ко мне</b> в личные сообщения.\n\n"
-    "Рассматриваю разные варианты сотрудничества:\n\n"
-    "<b>— рекламные посты</b>\n"
-    "<b>— размещение в каналах</b>\n"
-    "<b>— взаимопиар</b>\n"
-    "<b>— долгосрочное сотрудничество</b>\n"
-    "<b>— индивидуальные предложения</b>\n\n"
+    "<b>Рассматриваю разные варианты сотрудничества:</b>\n"
+    "— <b>рекламные посты</b>\n"
+    "— <b>размещение в каналах</b>\n"
+    "— <b>взаимопиар</b>\n"
+    "— <b>долгосрочное сотрудничество</b>\n"
+    "— <b>индивидуальные предложения</b>\n\n"
     "Есть идея или предложение? <b>Пишите — обсудим.</b>"
 )
 
@@ -203,7 +205,7 @@ def reviews_inline_keyboard() -> InlineKeyboardMarkup:
 
 def ads_inline_keyboard() -> InlineKeyboardMarkup:
     keyboard = [
-        [url_button(BTN_ADS_LINK, URL_ADS_CONTACT)],
+        [url_button(BTN_ADS_LINK, URL_ADS_CONTACT, E_OFFER)],
         [back_button()],
     ]
     return InlineKeyboardMarkup(keyboard)
