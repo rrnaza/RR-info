@@ -110,6 +110,8 @@ BTN_ADS_LINK = "Предложить"
 
 BTN_BACK = "Назад"
 CALLBACK_BACK = "back_to_main"
+CALLBACK_TALK_SOON = "talk_soon"
+TALK_SOON_TEXT = "Скоро…"
 
 WELCOME_TEXT = (
     f"{pe(E_HEART2, '❤️')}<b>Добро пожаловать в BullX Info!</b>\n\n"
@@ -173,6 +175,9 @@ ALT = {E_HUB: "📢", E_TALK: "💬", E_NAZA: "👑", E_HELPER: "➕", E_DEAL: "
 def rbtn(text: str, url: str, icon: str) -> str:
     return f'<tg-button type="url" url="{url}" style="primary">{pe(icon, ALT[icon])} {text}</tg-button>'
 
+def rbtn_cb(text: str, data: str, icon: str) -> str:
+    return f'<tg-button type="callback_data" data="{data}" style="primary">{pe(icon, ALT[icon])} {text}</tg-button>'
+
 def rrow(*buttons: str) -> str:
     return "<tg-button-row>" + "".join(buttons) + "</tg-button-row>"
 
@@ -184,7 +189,7 @@ RICH = {
     "info": f"<p>{rich_text(WELCOME_TEXT)}</p>",
     "about": f"<p>{rich_text(TEXT_ABOUT)}</p>",
     "projects": f"<p>{rich_text(TEXT_PROJECTS)}</p>"
-                + rrow(rbtn(BTN_PROJECTS_CHANNEL, URL_PROJECTS_CHANNEL, E_HUB), rbtn(BTN_PROJECTS_TALK, URL_PROJECTS_TALK, E_TALK)),
+                + rrow(rbtn(BTN_PROJECTS_CHANNEL, URL_PROJECTS_CHANNEL, E_HUB), rbtn_cb(BTN_PROJECTS_TALK, CALLBACK_TALK_SOON, E_TALK)),
     "contacts": f"<p>{rich_text(TEXT_CONTACTS.split('<blockquote>')[0].rstrip())}</p>"
                 "<blockquote>Стоимость услуги — <b>5% от суммы сделки.</b><br/>"
                 "Если сумма сделки до <b>500 грн</b> — фиксировано <b>25 грн.</b></blockquote>"
@@ -220,7 +225,7 @@ def about_inline_keyboard() -> InlineKeyboardMarkup:
 def projects_inline_keyboard() -> InlineKeyboardMarkup:
     keyboard = [
         [url_button(BTN_PROJECTS_CHANNEL, URL_PROJECTS_CHANNEL, E_HUB)],
-        [url_button(BTN_PROJECTS_TALK, URL_PROJECTS_TALK, E_TALK)],
+        [InlineKeyboardButton(BTN_PROJECTS_TALK, callback_data=CALLBACK_TALK_SOON, api_kwargs={"icon_custom_emoji_id": E_TALK})],
         [back_button()],
     ]
     return InlineKeyboardMarkup(keyboard)
@@ -342,6 +347,13 @@ async def back_callback_handler(update: Update, context: ContextTypes.DEFAULT_TY
         logger.warning("Не удалось убрать кнопки: %s", exc)
     await send_section(context.bot, update.effective_chat, "info", WELCOME_TEXT, main_reply_keyboard(), "Главное меню")
 
+async def talk_soon_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """чат ещё не открыт — показываем окошко по центру экрана"""
+    try:
+        await update.callback_query.answer(TALK_SOON_TEXT, show_alert=True)
+    except TelegramError as exc:
+        logger.warning("Ошибка окошка «Скоро»: %s", exc)
+
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.error("Исключение при обработке апдейта: %s", context.error)
 
@@ -382,6 +394,7 @@ async def main_async():
     application.add_handler(MessageHandler(filters.Regex(f"{BTN_REVIEWS}$"), reviews_handler))
     application.add_handler(MessageHandler(filters.Regex(f"{BTN_ADS}$"), ads_handler))
     application.add_handler(CallbackQueryHandler(back_callback_handler, pattern=f"^{CALLBACK_BACK}$"))
+    application.add_handler(CallbackQueryHandler(talk_soon_handler, pattern=f"^{CALLBACK_TALK_SOON}$"))
     application.add_error_handler(error_handler)
 
     logger.info("Бот запущен...")
