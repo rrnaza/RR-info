@@ -74,6 +74,7 @@ E_DEAL = "6019328362479097179"      # 🛡
 E_REVIEWS = "6019320644422867543"   # 💬 (отзывы)
 E_INFO = "5879785854284599288"      # ℹ️ (реклама)
 E_OFFER = "5967280668885913944"     # ✉️ (Предложить)
+E_CONTACTS = "5942877472163892475"  # 👥 (кнопка Контакты)
 
 
 def pe(emoji_id: str, fallback: str) -> str:
@@ -91,11 +92,11 @@ def url_button(text: str, url: str, emoji_id: str | None = None) -> InlineKeyboa
 # ПОДПИСИ КНОПОК И ТЕКСТЫ
 # =========================================================
 
-BTN_ABOUT = "👤 Обо мне"
-BTN_PROJECTS = "📁 Проекты"
-BTN_CONTACTS = "✉️ Контакты"
-BTN_REVIEWS = "⭐️ Отзывы"
-BTN_ADS = "📢 Реклама"
+BTN_ABOUT = "Обо мне"
+BTN_PROJECTS = "Проекты"
+BTN_CONTACTS = "Контакты"
+BTN_REVIEWS = "Отзывы"
+BTN_ADS = "Реклама"
 
 BTN_PROJECTS_CHANNEL = "BullXHub"
 BTN_PROJECTS_TALK = "BullXTalk"
@@ -165,11 +166,15 @@ TEXT_ADS = (
 # КЛАВИАТУРЫ
 # =========================================================
 
+def menu_button(text: str, emoji_id: str) -> KeyboardButton:
+    """кнопка нижнего меню с премиум-иконкой слева"""
+    return KeyboardButton(text, api_kwargs={"icon_custom_emoji_id": emoji_id})
+
 def main_reply_keyboard() -> ReplyKeyboardMarkup:
     keyboard = [
-        [KeyboardButton(BTN_ABOUT), KeyboardButton(BTN_PROJECTS)],
-        [KeyboardButton(BTN_CONTACTS), KeyboardButton(BTN_REVIEWS)],
-        [KeyboardButton(BTN_ADS)],
+        [menu_button(BTN_ABOUT, E_NAZA), menu_button(BTN_PROJECTS, E_HUB)],
+        [menu_button(BTN_CONTACTS, E_CONTACTS), menu_button(BTN_REVIEWS, E_REVIEWS)],
+        [menu_button(BTN_ADS, E_INFO)],
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, is_persistent=True)
 
@@ -240,6 +245,9 @@ async def send_section(chat, banner: str, text: str, reply_markup, where: str) -
 
 def strip_icons(markup):
     """та же инлайн-клавиатура, но без премиум-иконок на кнопках"""
+    if isinstance(markup, ReplyKeyboardMarkup):
+        return ReplyKeyboardMarkup([[KeyboardButton(b.text) for b in row] for row in markup.keyboard],
+                                   resize_keyboard=True, is_persistent=True)
     if not isinstance(markup, InlineKeyboardMarkup):
         return markup
     rows = []
