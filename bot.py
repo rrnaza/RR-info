@@ -25,7 +25,7 @@ from telegram.ext import (
 # КОНФИГУРАЦИЯ
 # =========================================================
 
-TOKEN = os.environ.get("BOT_TOKEN", "8873232031:AAGroNIl2379Kf_9GEp0u2nvesE3SF7kCRs")
+TOKEN = os.environ.get("BOT_TOKEN", "")
 PORT = int(os.environ.get("PORT", 8080))
 
 logging.basicConfig(
@@ -33,19 +33,21 @@ logging.basicConfig(
     level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
+# httpx пишет в журнал полный URL запроса вместе с токеном — оставляем только предупреждения
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 # =========================================================
 # ССЫЛКИ (URL)
 # =========================================================
 
-URL_PROJECTS_CHANNEL = "https://t.me/rrnftstore"
-URL_PROJECTS_BOT = "https://t.me/RRnftStoreBot"
+URL_PROJECTS_CHANNEL = "https://t.me/coolshop"
+URL_PROJECTS_BOT = "https://t.me/BullXStore_Bot"
 
 URL_CONTACT_NAZA = "https://t.me/wmixz"
-URL_CONTACT_MANAGER = "https://t.me/RrManag"
-URL_CONTACT_GARANT = "https://t.me/RrGuard"
+URL_CONTACT_MANAGER = "https://t.me/BullXHelper"
+URL_CONTACT_GARANT = "https://t.me/BullXDeal"
 
-URL_REVIEWS = "https://t.me/RrNazaReviews"
+URL_REVIEWS = "https://t.me/BullXRate"
 
 URL_ADS_CONTACT = "https://t.me/wmixz"
 
@@ -59,12 +61,12 @@ BTN_CONTACTS = "✉️ Контакты"
 BTN_REVIEWS = "⭐️ Отзывы"
 BTN_ADS = "📢 Реклама"
 
-BTN_PROJECTS_CHANNEL = "📢 RR STORE | NFT"
-BTN_PROJECTS_BOT = "🤖 RR | STORE | BOT"
+BTN_PROJECTS_CHANNEL = "📢 BullXHub | NEWS"
+BTN_PROJECTS_BOT = "🤖 BullX | Store"
 
 BTN_CONTACT_NAZA = "👤 RR | Naza"
-BTN_CONTACT_MANAGER = "👨‍💻 RR | Manager"
-BTN_CONTACT_GARANT = "🛡 RR | Garant"
+BTN_CONTACT_MANAGER = "👨‍💻 BullX | Helper"
+BTN_CONTACT_GARANT = "🛡 BullX | Deal"
 
 BTN_REVIEWS_LINK = "⭐️ Смотреть отзывы"
 BTN_ADS_LINK = "📩 Предложить"
@@ -84,9 +86,9 @@ TEXT_ABOUT = (
 )
 
 TEXT_PROJECTS = (
-    "<b>RR STORE | NFT — наш Telegram-канал,</b> где публикуем "
+    "<b>BullXHub | NEWS — наш Telegram-канал,</b> где публикуем "
     "<b>все новости, новые поступления</b> и проводим различные <b>розыгрыши!</b>\n\n"
-    "<b>RR | STORE | BOT — удобный бот-каталог, в котором можно посмотреть "
+    "<b>BullX | Store — удобный бот-каталог, в котором можно посмотреть "
     "и приобрести наши товары: Stars, Premium, NFT-подарки</b> и многое другое."
 )
 
@@ -94,19 +96,19 @@ TEXT_CONTACTS = (
     "<b>RR | Naza — владелец проектов.</b> Первый, к кому вы можете "
     "обратиться, если хотите что-то <b>приобрести,</b> предложить "
     "<b>сотрудничество</b> или просто что-то узнать.\n\n"
-    "<b>RR | Manager — менеджер и мой помощник.</b> Если я не могу "
+    "<b>BullX | Helper — менеджер и мой помощник.</b> Если я не могу "
     "ответить, можете обратиться к нему — поможет с покупкой и другими вопросами.\n\n"
-    "<b>RR | Garant — гарант ваших сделок на сумму до 3000 грн.</b>\n"
+    "<b>BullX | Deal — гарант ваших сделок на сумму до 3000 грн.</b>\n"
     "Стоимость услуги — <b>5% от суммы сделки.</b>\n"
     "Если сумма сделки до <b>500 грн</b> — фиксировано <b>25 грн.</b>\n\n"
     "По всем остальным вопросам также можете обращаться к <b>нашей команде</b> — постараемся помочь!"
 )
 
 TEXT_REVIEWS = (
-    "Здесь собраны <b>отзывы наших клиентов</b> о покупках и работе с <b>RR | STORE.</b>\n\n"
+    "Здесь собраны <b>отзывы наших клиентов</b> о покупках и работе с <b>BullX.</b>\n\n"
     "Нам важно не просто продать товар, а сделать так, чтобы <b>клиент остался довольный и вернулся снова.</b>\n\n"
     "Уже собрали <b>1000+ отзывов и продолжаем двигаться дальше.</b>\n\n"
-    "<b>Спасибо каждому, кто выбирает RR | STORE!</b>"
+    "<b>Спасибо каждому, кто выбирает BullX!</b>"
 )
 
 TEXT_ADS = (
