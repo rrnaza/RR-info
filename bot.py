@@ -1,6 +1,8 @@
 import logging
 import os
+import re
 import asyncio
+from pathlib import Path
 from aiohttp import web
 
 from telegram import (
@@ -25,6 +27,7 @@ from telegram.ext import (
 # КОНФИГУРАЦИЯ
 # =========================================================
 
+# Токен берётся только из переменной окружения BOT_TOKEN (Render → Environment)
 TOKEN = os.environ.get("BOT_TOKEN", "")
 PORT = int(os.environ.get("PORT", 8080))
 
@@ -36,12 +39,14 @@ logger = logging.getLogger(__name__)
 # httpx пишет в журнал полный URL запроса вместе с токеном — оставляем только предупреждения
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
+IMG = Path(__file__).parent / "img"
+
 # =========================================================
 # ССЫЛКИ (URL)
 # =========================================================
 
 URL_PROJECTS_CHANNEL = "https://t.me/coolshop"
-URL_PROJECTS_BOT = "https://t.me/BullXStore_Bot"
+URL_PROJECTS_TALK = "https://t.me/BullXTalk"
 
 URL_CONTACT_NAZA = "https://t.me/wmixz"
 URL_CONTACT_MANAGER = "https://t.me/BullXHelper"
@@ -50,6 +55,35 @@ URL_CONTACT_GARANT = "https://t.me/BullXDeal"
 URL_REVIEWS = "https://t.me/BullXRate"
 
 URL_ADS_CONTACT = "https://t.me/wmixz"
+
+# =========================================================
+# ПРЕМИУМ-ЭМОДЗИ (работают, пока у владельца бота есть Telegram Premium)
+# =========================================================
+
+E_WAVE = "5994750571041525522"      # 👋
+E_HEART = "5429553830033401743"     # ❤️ (Обо мне)
+E_HEART2 = "5429618099924016128"    # ❤️ (приветствие)
+E_WARN = "5870527021485919704"      # ❗️
+E_DOWN = "5807557921843715576"      # ⬇️
+E_BACK = "5805509901048356965"      # ⬅️
+E_HUB = "5771695636411847302"       # 📢
+E_TALK = "6019151079114021083"      # 💬
+E_NAZA = "5229027828527309057"      # 👑
+E_HELPER = "6021659039367173797"    # ➕
+E_DEAL = "6019328362479097179"      # 🛡
+E_REVIEWS = "6019320644422867543"   # 💬 (отзывы)
+
+
+def pe(emoji_id: str, fallback: str) -> str:
+    """премиум-эмодзи в HTML-тексте"""
+    return f'<tg-emoji emoji-id="{emoji_id}">{fallback}</tg-emoji>'
+
+
+def url_button(text: str, url: str, emoji_id: str | None = None) -> InlineKeyboardButton:
+    """инлайн-кнопка-ссылка с премиум-иконкой слева от текста"""
+    extra = {"icon_custom_emoji_id": emoji_id} if emoji_id else None
+    return InlineKeyboardButton(text, url=url, api_kwargs=extra)
+
 
 # =========================================================
 # ПОДПИСИ КНОПОК И ТЕКСТЫ
@@ -61,53 +95,55 @@ BTN_CONTACTS = "✉️ Контакты"
 BTN_REVIEWS = "⭐️ Отзывы"
 BTN_ADS = "📢 Реклама"
 
-BTN_PROJECTS_CHANNEL = "📢 BullXHub | NEWS"
-BTN_PROJECTS_BOT = "🤖 BullX | Store"
+BTN_PROJECTS_CHANNEL = "BullXHub"
+BTN_PROJECTS_TALK = "BullXTalk"
 
-BTN_CONTACT_NAZA = "👤 RR | Naza"
-BTN_CONTACT_MANAGER = "👨‍💻 BullX | Helper"
-BTN_CONTACT_GARANT = "🛡 BullX | Deal"
+BTN_CONTACT_NAZA = "RR | Naza"
+BTN_CONTACT_MANAGER = "BullXHelper"
+BTN_CONTACT_GARANT = "BullXDeal"
 
-BTN_REVIEWS_LINK = "⭐️ Смотреть отзывы"
+BTN_REVIEWS_LINK = "Смотреть отзывы"
 BTN_ADS_LINK = "📩 Предложить"
 
-BTN_BACK = "⬅️ Назад"
+BTN_BACK = "Назад"
 CALLBACK_BACK = "back_to_main"
 
-WELCOME_TEXT = "Добро пожаловать! 👋\n\nВыберите интересующий раздел с помощью кнопок меню ниже 👇"
-BACK_TO_MAIN_TEXT = "🏠 Главное меню\n\nВыберите раздел с помощью кнопок меню ниже 👇"
+WELCOME_TEXT = (
+    f"{pe(E_HEART2, '❤️')}<b>Добро пожаловать в BullX Info!</b>\n\n"
+    "Здесь всё самое важное о <b>BullX:</b> проекты, контакты, отзывы и реклама.\n\n"
+    f"Выбери раздел в меню ниже{pe(E_DOWN, '⬇️')}"
+)
 
 TEXT_ABOUT = (
-    "<b>Приветствую, ребята!</b>\n\n"
-    "Думаю, все, кто сюда зашёл, уже в курсе, <b>кто я и чем занимаюсь,</b> "
-    "так что не будем вдаваться в подробности.\n\n"
-    "Здесь собрал всё самое основное: <b>мои проекты, контакты команды, "
-    "отзывы и информацию по рекламе.</b>"
+    f"{pe(E_WAVE, '👋')}<b>Приветствую, ребята!</b>\n\n"
+    "Думаю, все, кто сюда зашёл, уже знают, <b>кто я и чем занимаюсь</b> — "
+    f"я владелец проектов <b>BullX</b>{pe(E_HEART, '❤️')}\n\n"
+    f"{pe(E_WARN, '❗️')}Здесь собрал всё самое основное: <b>проекты, контакты команды, отзывы и рекламу.</b>"
 )
 
 TEXT_PROJECTS = (
-    "<b>BullXHub | NEWS — наш Telegram-канал,</b> где публикуем "
-    "<b>все новости, новые поступления</b> и проводим различные <b>розыгрыши!</b>\n\n"
-    "<b>BullX | Store — удобный бот-каталог, в котором можно посмотреть "
-    "и приобрести наши товары: Stars, Premium, NFT-подарки</b> и многое другое."
+    f"{pe(E_HUB, '📢')}<b>BullXHub — наш Telegram-канал,</b> где публикуем "
+    "<b>все новости, новые поступления, ежедневный рынок NFT</b> и проводим <b>розыгрыши!</b>\n\n"
+    f"{pe(E_TALK, '💬')}<b>BullXTalk — наш чат,</b> где можно "
+    "<b>покупать, продавать и обменивать NFT и не только</b> — напрямую с другими людьми."
 )
 
 TEXT_CONTACTS = (
-    "<b>RR | Naza — владелец проектов.</b> Первый, к кому вы можете "
-    "обратиться, если хотите что-то <b>приобрести,</b> предложить "
-    "<b>сотрудничество</b> или просто что-то узнать.\n\n"
-    "<b>BullX | Helper — менеджер и мой помощник.</b> Если я не могу "
-    "ответить, можете обратиться к нему — поможет с покупкой и другими вопросами.\n\n"
-    "<b>BullX | Deal — гарант ваших сделок на сумму до 3000 грн.</b>\n"
-    "Стоимость услуги — <b>5% от суммы сделки.</b>\n"
-    "Если сумма сделки до <b>500 грн</b> — фиксировано <b>25 грн.</b>\n\n"
-    "По всем остальным вопросам также можете обращаться к <b>нашей команде</b> — постараемся помочь!"
+    f"{pe(E_NAZA, '👑')}<b>RR | Naza — владелец BullX.</b> Первый, к кому можно обратиться, "
+    "если хотите что-то <b>приобрести,</b> предложить <b>сотрудничество</b> или просто что-то узнать.\n\n"
+    f"{pe(E_HELPER, '➕')}<b>BullXHelper — менеджер и мой помощник.</b> Если я не могу ответить, "
+    "пишите ему — поможет <b>с покупкой и другими вопросами.</b>\n\n"
+    f"{pe(E_DEAL, '🛡')}<b>BullXDeal — </b>гарант ваших сделок на сумму<b> до 3000 грн</b>.\n"
+    "<blockquote>Стоимость услуги — <b>5% от суммы сделки.</b>\n"
+    "Если сумма сделки до <b>500 грн</b> — фиксировано <b>25 грн.</b></blockquote>\n\n"
+    "По всем остальным вопросам обращайтесь к <b>нашей команде</b> — постараемся помочь!"
 )
 
 TEXT_REVIEWS = (
     "Здесь собраны <b>отзывы наших клиентов</b> о покупках и работе с <b>BullX.</b>\n\n"
-    "Нам важно не просто продать товар, а сделать так, чтобы <b>клиент остался довольный и вернулся снова.</b>\n\n"
-    "Уже собрали <b>1000+ отзывов и продолжаем двигаться дальше.</b>\n\n"
+    "Нам важно не просто продать товар, а сделать так, чтобы "
+    "<b>клиент остался довольным и вернулся снова.</b>\n\n"
+    f"{pe(E_REVIEWS, '💬')}Уже собрали <b>1500+ отзывов</b> и <b>продолжаем двигаться дальше.</b>\n"
     "<b>Спасибо каждому, кто выбирает BullX!</b>"
 )
 
@@ -135,112 +171,117 @@ def main_reply_keyboard() -> ReplyKeyboardMarkup:
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, is_persistent=True)
 
+def back_button() -> InlineKeyboardButton:
+    return InlineKeyboardButton(BTN_BACK, callback_data=CALLBACK_BACK, api_kwargs={"icon_custom_emoji_id": E_BACK})
+
+def about_inline_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([[back_button()]])
+
 def projects_inline_keyboard() -> InlineKeyboardMarkup:
     keyboard = [
-        [InlineKeyboardButton(BTN_PROJECTS_CHANNEL, url=URL_PROJECTS_CHANNEL)],
-        [InlineKeyboardButton(BTN_PROJECTS_BOT, url=URL_PROJECTS_BOT)],
-        [InlineKeyboardButton(BTN_BACK, callback_data=CALLBACK_BACK)],
+        [url_button(BTN_PROJECTS_CHANNEL, URL_PROJECTS_CHANNEL, E_HUB)],
+        [url_button(BTN_PROJECTS_TALK, URL_PROJECTS_TALK, E_TALK)],
+        [back_button()],
     ]
     return InlineKeyboardMarkup(keyboard)
 
 def contacts_inline_keyboard() -> InlineKeyboardMarkup:
     keyboard = [
-        [InlineKeyboardButton(BTN_CONTACT_NAZA, url=URL_CONTACT_NAZA)],
-        [InlineKeyboardButton(BTN_CONTACT_MANAGER, url=URL_CONTACT_MANAGER)],
-        [InlineKeyboardButton(BTN_CONTACT_GARANT, url=URL_CONTACT_GARANT)],
-        [InlineKeyboardButton(BTN_BACK, callback_data=CALLBACK_BACK)],
+        [url_button(BTN_CONTACT_NAZA, URL_CONTACT_NAZA, E_NAZA)],
+        [url_button(BTN_CONTACT_MANAGER, URL_CONTACT_MANAGER, E_HELPER)],
+        [url_button(BTN_CONTACT_GARANT, URL_CONTACT_GARANT, E_DEAL)],
+        [back_button()],
     ]
     return InlineKeyboardMarkup(keyboard)
 
 def reviews_inline_keyboard() -> InlineKeyboardMarkup:
     keyboard = [
-        [InlineKeyboardButton(BTN_REVIEWS_LINK, url=URL_REVIEWS)],
-        [InlineKeyboardButton(BTN_BACK, callback_data=CALLBACK_BACK)],
+        [url_button(BTN_REVIEWS_LINK, URL_REVIEWS, E_REVIEWS)],
+        [back_button()],
     ]
     return InlineKeyboardMarkup(keyboard)
 
 def ads_inline_keyboard() -> InlineKeyboardMarkup:
     keyboard = [
-        [InlineKeyboardButton(BTN_ADS_LINK, url=URL_ADS_CONTACT)],
-        [InlineKeyboardButton(BTN_BACK, callback_data=CALLBACK_BACK)],
+        [url_button(BTN_ADS_LINK, URL_ADS_CONTACT)],
+        [back_button()],
     ]
     return InlineKeyboardMarkup(keyboard)
+
+# =========================================================
+# ОТПРАВКА: баннер + текст подписью одним сообщением
+# =========================================================
+
+async def send_section(chat, banner: str, text: str, reply_markup, where: str) -> None:
+    """баннер img/<banner>.jpg с текстом-подписью; если картинки нет — просто текст"""
+    path = IMG / f"{banner}.jpg"
+    try:
+        if path.exists():
+            with path.open("rb") as photo:
+                await chat.send_photo(photo, caption=text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
+        else:
+            await chat.send_message(text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
+    except TelegramError as exc:
+        # если Telegram не принял премиум-эмодзи (например, закончился Premium) — шлём обычными
+        logger.error("Ошибка в разделе '%s': %s — отправляю без премиум-эмодзи", where, exc)
+        plain = re.sub(r'<tg-emoji emoji-id="\d+">(.*?)</tg-emoji>', r"\1", text)
+        markup = strip_icons(reply_markup)
+        try:
+            if path.exists():
+                with path.open("rb") as photo:
+                    await chat.send_photo(photo, caption=plain, parse_mode=ParseMode.HTML, reply_markup=markup)
+            else:
+                await chat.send_message(plain, parse_mode=ParseMode.HTML, reply_markup=markup)
+        except TelegramError as exc2:
+            logger.error("Повторная ошибка в разделе '%s': %s", where, exc2)
+
+
+def strip_icons(markup):
+    """та же инлайн-клавиатура, но без премиум-иконок на кнопках"""
+    if not isinstance(markup, InlineKeyboardMarkup):
+        return markup
+    rows = []
+    for row in markup.inline_keyboard:
+        rows.append([
+            InlineKeyboardButton(b.text, url=b.url) if b.url else InlineKeyboardButton(b.text, callback_data=b.callback_data)
+            for b in row
+        ])
+    return InlineKeyboardMarkup(rows)
 
 # =========================================================
 # ОБРАБОТЧИКИ БОТА
 # =========================================================
 
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    try:
-        await update.message.reply_text(
-            WELCOME_TEXT,
-            parse_mode=ParseMode.HTML,
-            reply_markup=main_reply_keyboard(),
-        )
-    except TelegramError as exc:
-        logger.error("Ошибка при отправке приветствия: %s", exc)
+    await send_section(update.effective_chat, "info", WELCOME_TEXT, main_reply_keyboard(), "Приветствие")
 
 async def about_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    try:
-        await update.message.reply_text(TEXT_ABOUT, parse_mode=ParseMode.HTML)
-    except TelegramError as exc:
-        logger.error("Ошибка в разделе 'Обо мне': %s", exc)
+    await send_section(update.effective_chat, "about", TEXT_ABOUT, about_inline_keyboard(), "Обо мне")
 
 async def projects_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    try:
-        await update.message.reply_text(
-            TEXT_PROJECTS,
-            parse_mode=ParseMode.HTML,
-            reply_markup=projects_inline_keyboard(),
-        )
-    except TelegramError as exc:
-        logger.error("Ошибка в разделе 'Проекты': %s", exc)
+    await send_section(update.effective_chat, "projects", TEXT_PROJECTS, projects_inline_keyboard(), "Проекты")
 
 async def contacts_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    try:
-        await update.message.reply_text(
-            TEXT_CONTACTS,
-            parse_mode=ParseMode.HTML,
-            reply_markup=contacts_inline_keyboard(),
-        )
-    except TelegramError as exc:
-        logger.error("Ошибка в разделе 'Контакты': %s", exc)
+    await send_section(update.effective_chat, "contacts", TEXT_CONTACTS, contacts_inline_keyboard(), "Контакты")
 
 async def reviews_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    try:
-        await update.message.reply_text(
-            TEXT_REVIEWS,
-            parse_mode=ParseMode.HTML,
-            reply_markup=reviews_inline_keyboard(),
-        )
-    except TelegramError as exc:
-        logger.error("Ошибка в разделе 'Отзывы': %s", exc)
+    await send_section(update.effective_chat, "reviews", TEXT_REVIEWS, reviews_inline_keyboard(), "Отзывы")
 
 async def ads_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    try:
-        await update.message.reply_text(
-            TEXT_ADS,
-            parse_mode=ParseMode.HTML,
-            reply_markup=ads_inline_keyboard(),
-        )
-    except TelegramError as exc:
-        logger.error("Ошибка в разделе 'Реклама': %s", exc)
+    await send_section(update.effective_chat, "ads", TEXT_ADS, ads_inline_keyboard(), "Реклама")
 
 async def back_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """«Назад»: убираем кнопки у раздела и присылаем главное меню (приветствие с баннером)"""
     query = update.callback_query
     try:
         await query.answer()
     except TelegramError as exc:
         logger.warning("Ошибка при answer callback_query: %s", exc)
-
     try:
-        await query.edit_message_text(
-            BACK_TO_MAIN_TEXT,
-            parse_mode=ParseMode.HTML,
-            reply_markup=None,
-        )
+        await query.edit_message_reply_markup(reply_markup=None)
     except TelegramError as exc:
-        logger.warning("Ошибка при возврате в главное меню: %s", exc)
+        logger.warning("Не удалось убрать кнопки: %s", exc)
+    await send_section(update.effective_chat, "info", WELCOME_TEXT, main_reply_keyboard(), "Главное меню")
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.error("Исключение при обработке апдейта: %s", context.error)
@@ -266,8 +307,8 @@ async def start_web_server():
 # =========================================================
 
 async def main_async():
-    if not TOKEN or TOKEN == "PUT_YOUR_TOKEN_HERE":
-        raise RuntimeError("Не задан токен бота.")
+    if not TOKEN:
+        raise RuntimeError("Не задан токен бота: добавь BOT_TOKEN в Render → Environment.")
 
     # Запускаем веб-сервер для Render
     await start_web_server()
@@ -285,7 +326,7 @@ async def main_async():
     application.add_error_handler(error_handler)
 
     logger.info("Бот запущен...")
-    
+
     async with application:
         await application.initialize()
         await application.start()
