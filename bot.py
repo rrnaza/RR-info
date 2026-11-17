@@ -327,11 +327,11 @@ async def main_async():
     application = Application.builder().token(TOKEN).build()
 
     application.add_handler(CommandHandler("start", start_handler))
-    application.add_handler(MessageHandler(filters.Regex(f"^{BTN_ABOUT}$"), about_handler))
-    application.add_handler(MessageHandler(filters.Regex(f"^{BTN_PROJECTS}$"), projects_handler))
-    application.add_handler(MessageHandler(filters.Regex(f"^{BTN_CONTACTS}$"), contacts_handler))
-    application.add_handler(MessageHandler(filters.Regex(f"^{BTN_REVIEWS}$"), reviews_handler))
-    application.add_handler(MessageHandler(filters.Regex(f"^{BTN_ADS}$"), ads_handler))
+    application.add_handler(MessageHandler(filters.Regex(f"{BTN_ABOUT}$"), about_handler))
+    application.add_handler(MessageHandler(filters.Regex(f"{BTN_PROJECTS}$"), projects_handler))
+    application.add_handler(MessageHandler(filters.Regex(f"{BTN_CONTACTS}$"), contacts_handler))
+    application.add_handler(MessageHandler(filters.Regex(f"{BTN_REVIEWS}$"), reviews_handler))
+    application.add_handler(MessageHandler(filters.Regex(f"{BTN_ADS}$"), ads_handler))
     application.add_handler(CallbackQueryHandler(back_callback_handler, pattern=f"^{CALLBACK_BACK}$"))
     application.add_error_handler(error_handler)
 
